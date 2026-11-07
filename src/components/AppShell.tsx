@@ -8,6 +8,7 @@ import { BASE_PATH, isConfigured } from "@/lib/supabase";
 import { ROLE_LABEL } from "@/lib/format";
 import { Icon, type IconName } from "./icons";
 import { Badge, Button, cx, Modal } from "./ui";
+import { InstallBanner, useInstall } from "./Install";
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/", label: "Главная", icon: "home" },
@@ -17,6 +18,8 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: "/reports", label: "Отчёты", icon: "chart" },
   { href: "/settings", label: "Настройки", icon: "gear" },
 ];
+
+const MOBILE_NAV = ["/", "/clients", "/calendar", "/payments"];
 
 const PUBLIC = ["/login", "/reset"];
 
@@ -31,6 +34,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const isPublic = PUBLIC.some((p) => path.replace(/\/$/, "") === p);
+  const [more, setMore] = useState(false);
+  const { standalone, install } = useInstall();
 
   useEffect(() => {
     if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
@@ -94,18 +99,53 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SyncChip compact />
         </header>
         <ConflictBanner />
+        <InstallBanner />
         <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 md:px-8 md:pb-10 md:pt-8">{children}</main>
       </div>
 
       {/* нижняя навигация на мобильном */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-6 border-t border-black/5 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        {NAV.map((n) => (
-          <Link key={n.href} href={n.href} className={cx("flex flex-col items-center gap-0.5 py-2 text-[10px]", isActive(path, n.href) ? "text-emerald-700" : "text-zinc-500")}>
-            <Icon name={n.icon} className="h-[22px] w-[22px]" />
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-black/5 bg-white/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+        {NAV.filter((n) => MOBILE_NAV.includes(n.href)).map((n) => (
+          <Link
+            key={n.href}
+            href={n.href}
+            className={cx("flex touch-manipulation flex-col items-center gap-0.5 pb-1.5 pt-2 text-[10.5px] font-medium", isActive(path, n.href) ? "text-emerald-700" : "text-zinc-500")}
+          >
+            <Icon name={n.icon} className="h-6 w-6" />
             {n.label}
           </Link>
         ))}
+        <button
+          onClick={() => setMore(true)}
+          className={cx("flex touch-manipulation flex-col items-center gap-0.5 pb-1.5 pt-2 text-[10.5px] font-medium", ["/reports", "/settings"].some((h) => isActive(path, h)) ? "text-emerald-700" : "text-zinc-500")}
+        >
+          <Icon name="more" className="h-6 w-6" />
+          Ещё
+        </button>
       </nav>
+
+      <Modal open={more} onClose={() => setMore(false)} title="Ещё">
+        <div className="-mx-1 space-y-1">
+          {NAV.filter((n) => !MOBILE_NAV.includes(n.href)).map((n) => (
+            <Link key={n.href} href={n.href} onClick={() => setMore(false)} className="flex items-center gap-3 rounded-xl px-3 py-3.5 text-[16px] active:bg-zinc-100">
+              <Icon name={n.icon} className="h-6 w-6 text-emerald-700" />
+              {n.label}
+              <Icon name="chevronR" className="ml-auto h-5 w-5 text-zinc-300" />
+            </Link>
+          ))}
+          {!standalone && (
+            <button onClick={() => { setMore(false); install(); }} className="flex w-full items-center gap-3 rounded-xl px-3 py-3.5 text-left text-[16px] active:bg-zinc-100">
+              <Icon name="download" className="h-6 w-6 text-emerald-700" />
+              Установить на телефон
+              <Icon name="chevronR" className="ml-auto h-5 w-5 text-zinc-300" />
+            </button>
+          )}
+        </div>
+        <div className="mt-4 rounded-xl bg-zinc-50 px-3 py-3 text-sm">
+          <div className="font-medium">{store.me?.full_name}</div>
+          <div className="text-zinc-500">{store.me ? ROLE_LABEL[store.me.role] : ""}</div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -121,10 +161,13 @@ export function Logo({ small }: { small?: boolean }) {
 }
 
 function SyncChip({ compact }: { compact?: boolean }) {
-  const { online, syncing, queue, syncNow } = useStore();
+  const { online, syncing, queue, syncNow, syncError } = useStore();
   let label = "Синхронизировано";
-  let tone: "green" | "amber" | "gray" | "blue" = "green";
-  if (!online) {
+  let tone: "green" | "amber" | "gray" | "blue" | "red" = "green";
+  if (syncError && online && !syncing) {
+    label = syncError;
+    tone = "red";
+  } else if (!online) {
     label = queue.length ? `Офлайн · ${queue.length} в очереди` : "Офлайн";
     tone = "amber";
   } else if (syncing) {

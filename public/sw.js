@@ -1,5 +1,5 @@
 /* AgroKontrol service worker: офлайн-доступ к интерфейсу */
-const VERSION = "ak-v1";
+const VERSION = "ak-v2";
 const SCOPE = self.registration.scope; // например https://user.github.io/repo/
 const PAGES = ["", "login/", "clients/", "client/", "payments/", "calendar/", "reports/", "settings/", "reset/"];
 

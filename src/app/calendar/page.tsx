@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useBundles, type ClientBundle } from "@/lib/derived";
 import type { Visit } from "@/lib/types";
@@ -9,7 +9,7 @@ import { autoPlan, type PlanEntry } from "@/lib/billing";
 import {
   addDays, DOW_FULL, DOW_SHORT, fmtShort, fmtTime, fmtWeek, isoDow, minToTime, mondayOf, monthTitle, parseISO, timeToMin, today, toISO,
 } from "@/lib/dates";
-import { VISIT_LABEL } from "@/lib/format";
+import { telHref, VISIT_LABEL } from "@/lib/format";
 import { Badge, Button, Card, cx, Empty, Field, Input, Modal, PageHeader, Segmented, Select } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { VisitModal } from "@/components/forms";
@@ -26,7 +26,12 @@ export default function CalendarPage() {
   const [cursor, setCursor] = useState(today());
   const [visit, setVisit] = useState<Visit | undefined>();
   const [placing, setPlacing] = useState<{ entry?: PlanEntry; visit?: Visit } | null>(null);
-  const [showPlan, setShowPlan] = useState(true);
+  const [showPlan, setShowPlan] = useState(false);
+  useEffect(() => {
+    // на телефоне по умолчанию открыт день, на компьютере — неделя
+    if (window.matchMedia("(min-width: 1280px)").matches) setShowPlan(true);
+    if (window.matchMedia("(max-width: 639px)").matches) setView("day");
+  }, []);
   const [msg, setMsg] = useState("");
 
   const visitsByDay = useMemo(() => {
@@ -104,15 +109,15 @@ export default function CalendarPage() {
         title="Календарь"
         subtitle={title}
         actions={
-          <>
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <Segmented<View> value={view} onChange={setView} options={[{ value: "day", label: "День" }, { value: "week", label: "Неделя" }, { value: "month", label: "Месяц" }]} />
-            <div className="flex gap-1">
+            <div className="ml-auto flex gap-1 sm:ml-0">
               <Button size="sm" onClick={() => shift(-1)} aria-label="Назад"><Icon name="chevronL" className="h-4 w-4" /></Button>
               <Button size="sm" onClick={() => setCursor(today())}>Сегодня</Button>
               <Button size="sm" onClick={() => shift(1)} aria-label="Вперёд"><Icon name="chevronR" className="h-4 w-4" /></Button>
             </div>
-            <Button size="sm" onClick={() => exportIcs(data.visits, byId)} title="Файл календаря для TickTick / Google / Apple"><Icon name="download" className="h-4 w-4" />.ics</Button>
-          </>
+            <Button size="sm" className="max-sm:hidden" onClick={() => exportIcs(data.visits, byId)} title="Файл календаря для TickTick / Google / Apple"><Icon name="download" className="h-4 w-4" />.ics</Button>
+          </div>
         }
       />
 
@@ -125,14 +130,17 @@ export default function CalendarPage() {
           {view === "month" && <MonthView month={cursor} visitsByDay={visitsByDay} byId={byId} onDay={(d) => { setCursor(d); setView("day"); }} />}
         </div>
 
-        <aside className="xl:w-80 xl:shrink-0">
+        <aside className="order-first xl:order-none xl:w-80 xl:shrink-0">
           <Card className="overflow-hidden">
             <button onClick={() => setShowPlan(!showPlan)} className="flex w-full items-center justify-between px-4 py-3 text-left">
               <span className="font-semibold">Ожидают планирования</span>
-              <Badge tone={planEntries.length + unscheduled.length ? "amber" : "green"}>{planEntries.length + unscheduled.length}</Badge>
+              <span className="flex items-center gap-2">
+                <Badge tone={planEntries.length + unscheduled.length ? "amber" : "green"}>{planEntries.length + unscheduled.length}</Badge>
+                <Icon name="chevronR" className={cx("h-4 w-4 text-zinc-400 transition", showPlan && "rotate-90")} />
+              </span>
             </button>
             {showPlan && (
-              <div className="max-h-[70vh] overflow-y-auto border-t border-zinc-100">
+              <div className="max-h-[60vh] overflow-y-auto overscroll-contain border-t border-zinc-100">
                 {planWeeks.length === 0 && <Empty>Все оплаченные визиты расставлены</Empty>}
                 {planWeeks.map((w) => {
                   const entries = planEntries.filter((e) => e.week === w);
@@ -153,7 +161,7 @@ export default function CalendarPage() {
                               draggable
                               onDragStart={(ev) => ev.dataTransfer.setData("text/plain", `e|${e.client.id}|${e.week}`)}
                               onClick={() => setPlacing({ entry: e })}
-                              className="mb-1 flex cursor-grab items-center justify-between rounded-lg bg-zinc-50 px-2.5 py-1.5 text-sm hover:bg-emerald-50"
+                              className="mb-1 flex cursor-grab items-center justify-between rounded-lg bg-zinc-50 px-3 py-2.5 text-sm hover:bg-emerald-50 active:bg-emerald-50 sm:px-2.5 sm:py-1.5"
                             >
                               <span className="truncate">{e.client.full_name}</span>
                               {e.reason === "pay_on_visit" && <Badge tone="violet">при визите</Badge>}
@@ -176,7 +184,7 @@ export default function CalendarPage() {
                     </div>
                   );
                 })}
-                <div className="px-4 pb-3 text-xs text-zinc-400">Перетащите клиента на день или нажмите, чтобы выбрать дату. Без оплаты клиенты сюда не попадают.</div>
+                <div className="px-4 pb-3 text-xs text-zinc-400">Нажмите на клиента, чтобы выбрать день и время (на компьютере можно перетащить). Без оплаты клиенты сюда не попадают.</div>
               </div>
             )}
           </Card>
@@ -246,7 +254,15 @@ function WeekDay({ day, visits, byId, onOpen, onDrop, onDay }: { day: string; vi
   const isToday = day === today();
   const full = visits.length >= s.visit_limit;
   return (
-    <div {...dz.props} className={cx("flex min-h-[140px] flex-col rounded-2xl p-2 ring-1 transition", work ? "bg-white ring-black/5" : "bg-zinc-100/60 ring-transparent", dz.over && "ring-2 ring-emerald-500")}>
+    <div
+      {...dz.props}
+      className={cx(
+        "flex flex-col rounded-2xl p-2 ring-1 transition sm:min-h-[140px]",
+        work ? "bg-white ring-black/5" : "bg-zinc-100/60 ring-transparent",
+        !work && visits.length === 0 && "max-sm:hidden",
+        dz.over && "ring-2 ring-emerald-500",
+      )}
+    >
       <button onClick={() => onDay(day)} className="mb-2 flex items-center justify-between px-1 text-left">
         <span className={cx("text-sm", isToday ? "font-bold text-emerald-700" : "font-medium")}>{DOW_SHORT[isoDow(day) - 1]} {fmtShort(day)}</span>
         {work && <span className={cx("text-[11px] tabular", full ? "text-red-500" : "text-zinc-400")}>{visits.length}/{s.visit_limit}</span>}
@@ -281,7 +297,7 @@ function DayView({ day, visits, byId, onOpen, onDrop }: { day: string; visits: V
           <span>{work ? "Рабочий день" : "Нерабочий день"} · {fmtTime(s.day_start)}–{fmtTime(s.day_end)}</span>
           <span>Визитов {visits.length}/{s.visit_limit} · осмотр {Math.round(totalMin / 6) / 10} ч</span>
         </div>
-        {visits.length === 0 && <Empty>На этот день визитов нет. Перетащите сюда клиента из списка ожидающих.</Empty>}
+        {visits.length === 0 && <Empty>На этот день визитов нет. Выберите клиента в списке «Ожидают планирования».</Empty>}
         <div className="space-y-2">
           {visits.map((v, i) => {
             const b = byId.get(v.client_id);
@@ -297,22 +313,22 @@ function DayView({ day, visits, byId, onOpen, onDrop }: { day: string; visits: V
                     {gap !== null && i > 0 && <span className="ml-auto normal-case">дорога {gap} мин</span>}
                   </div>
                 )}
-                <div className={cx("flex items-center gap-3 rounded-xl border-l-4 bg-zinc-50 px-3 py-2.5", BORDER[v.status])}>
-                  <div className="w-14 shrink-0 text-sm font-semibold tabular">{fmtTime(v.start_time) || "—"}</div>
+                <div className={cx("flex items-center gap-2.5 rounded-xl border-l-4 bg-zinc-50 px-3 py-2.5", BORDER[v.status])}>
+                  <div className="w-11 shrink-0 text-sm font-semibold tabular sm:w-14">{fmtTime(v.start_time) || "—"}</div>
                   <button onClick={() => onOpen(v)} className="min-w-0 flex-1 text-left">
                     <div className="truncate font-medium">{b?.client.full_name}</div>
                     <div className="truncate text-xs text-zinc-500">{b?.client.address || "—"} · {b?.area} м² · {v.duration_min} мин</div>
                     {v.note && <div className="truncate text-xs text-zinc-400">📝 {v.note}</div>}
                   </button>
                   <div className="flex shrink-0 items-center gap-1">
-                    <Badge tone={TONE[v.status]} className="hidden sm:inline-flex">{VISIT_LABEL[v.status]}</Badge>
+                    <Badge tone={TONE[v.status]} className="max-sm:hidden">{VISIT_LABEL[v.status]}</Badge>
                     {v.status !== "done" && (
-                      <button title="Посещён" onClick={() => update("visits", v.id, { status: "done" }, "Отметка визита")} className="grid h-8 w-8 place-items-center rounded-full bg-emerald-100 text-emerald-700">✓</button>
+                      <button title="Посещён" aria-label="Посещён" onClick={() => update("visits", v.id, { status: "done" }, "Отметка визита")} className="grid h-10 w-10 touch-manipulation place-items-center rounded-full bg-emerald-100 text-emerald-700 active:scale-95"><Icon name="check" className="h-5 w-5" /></button>
                     )}
                     {v.status !== "missed" && v.status !== "done" && (
-                      <button title="Не посещён" onClick={() => update("visits", v.id, { status: "missed" }, "Отметка визита")} className="grid h-8 w-8 place-items-center rounded-full bg-red-50 text-red-500">✕</button>
+                      <button title="Не посещён" aria-label="Не посещён" onClick={() => update("visits", v.id, { status: "missed" }, "Отметка визита")} className="grid h-10 w-10 touch-manipulation place-items-center rounded-full bg-red-50 text-red-500 active:scale-95"><Icon name="x" className="h-5 w-5" /></button>
                     )}
-                    {b?.client.phone && <a href={`tel:${b.client.phone}`} className="grid h-8 w-8 place-items-center rounded-full bg-zinc-200 text-zinc-600" title="Позвонить">☎</a>}
+                    {b?.client.phone && <a href={telHref(b.client.phone)} aria-label="Позвонить" className="grid h-10 w-10 place-items-center rounded-full bg-zinc-200 text-zinc-600 active:scale-95" title="Позвонить"><Icon name="phone" className="h-5 w-5" /></a>}
                   </div>
                 </div>
               </div>
@@ -341,7 +357,7 @@ function MonthView({ month, visitsByDay, byId, onDay }: { month: string; visitsB
           const inMonth = d.slice(0, 7) === m;
           const work = data.settings.work_days.includes(isoDow(d));
           return (
-            <button key={d} onClick={() => onDay(d)} className={cx("min-h-[84px] border-b border-r border-zinc-100 p-1.5 text-left align-top hover:bg-emerald-50/50", !inMonth && "bg-zinc-50/70 text-zinc-300", work && inMonth && "bg-emerald-50/20")}>
+            <button key={d} onClick={() => onDay(d)} className={cx("min-h-[64px] border-b border-r border-zinc-100 p-1 text-left align-top hover:bg-emerald-50/50 sm:min-h-[84px] sm:p-1.5", !inMonth && "bg-zinc-50/70 text-zinc-300", work && inMonth && "bg-emerald-50/20")}>
               <div className={cx("text-xs", d === today() && "font-bold text-emerald-700")}>{Number(d.slice(8))}</div>
               {vs.slice(0, 3).map((v) => (
                 <div key={v.id} className={cx("mt-0.5 truncate rounded px-1 text-[11px]", { planned: "bg-sky-50 text-sky-800", done: "bg-emerald-50 text-emerald-800", missed: "bg-red-50 text-red-700", rescheduled: "bg-amber-50 text-amber-800" }[v.status])}>

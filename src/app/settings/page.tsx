@@ -5,10 +5,12 @@ import { useStore } from "@/lib/store";
 import { supabase } from "@/lib/supabase";
 import type { AuditEntry, Profile, Settings } from "@/lib/types";
 import { DOW_SHORT, fmtTime } from "@/lib/dates";
-import { fmtPhone, normalizePhone, ROLE_LABEL } from "@/lib/format";
+import { fmtPhone, ROLE_LABEL } from "@/lib/format";
+import { PhoneInput, isPhoneComplete } from "@/components/PhoneInput";
 import { ACTION_LABEL, describeChanges, TABLE_LABEL } from "@/lib/audit";
 import { Badge, Button, Card, cx, Empty, Field, Input, Modal, PageHeader, Row, SectionTitle, Select } from "@/components/ui";
 import { Icon } from "@/components/icons";
+import { InstallSteps, useInstall } from "@/components/Install";
 
 export default function SettingsPage() {
   const { isAdmin, me, signOut, queue } = useStore();
@@ -115,9 +117,10 @@ function Users() {
 
   async function create() {
     setErr("");
+    if (!isPhoneComplete(f.phone)) return setErr("Введите номер полностью: +7 (XXX) XXX-XX-XX");
     setBusy(true);
     const { error } = await supabase.rpc("create_app_user", {
-      p_phone: normalizePhone(f.phone), p_password: f.password, p_full_name: f.full_name, p_role: f.role, p_email: f.email || null,
+      p_phone: f.phone, p_password: f.password, p_full_name: f.full_name, p_role: f.role, p_email: f.email || null,
     });
     setBusy(false);
     if (error) return setErr(error.message);
@@ -166,7 +169,7 @@ function Users() {
       <Modal open={add} onClose={() => setAdd(false)} title="Новый пользователь" footer={<><Button onClick={() => setAdd(false)}>Отмена</Button><Button variant="primary" onClick={create} disabled={busy}>Создать</Button></>}>
         <div className="space-y-3">
           <Field label="Имя"><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></Field>
-          <Field label="Телефон (логин)"><Input type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
+          <Field label="Телефон (логин)"><PhoneInput value={f.phone} onChange={(v) => setF({ ...f, phone: v })} /></Field>
           <Field label="Пароль"><Input type="text" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} minLength={6} /></Field>
           <Field label="Роль">
             <Select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
@@ -362,14 +365,25 @@ function Journal() {
 }
 
 function Install() {
+  const { standalone, platform, canPrompt, install } = useInstall();
   return (
     <>
-      <SectionTitle>Ярлык на домашнем экране</SectionTitle>
+      <SectionTitle>Приложение на телефоне</SectionTitle>
       <Card className="p-4 text-sm text-zinc-600">
-        <p><b>iPhone:</b> Safari → «Поделиться» → «На экран „Домой“».</p>
-        <p className="mt-1"><b>Android:</b> Chrome → меню ⋮ → «Добавить на главный экран».</p>
-        <p className="mt-1"><b>Mac / Windows:</b> Chrome или Edge → значок установки в адресной строке.</p>
-        <p className="mt-2 text-zinc-400">Без интернета приложение открывается из кэша, а изменения и платежи складываются в очередь и отправляются при появлении связи.</p>
+        {standalone ? (
+          <p className="text-emerald-700">Приложение установлено и запущено с экрана «Домой».</p>
+        ) : (
+          <>
+            {canPrompt ? (
+              <Button variant="primary" onClick={install} className="mb-3 w-full sm:w-auto">
+                <Icon name="download" className="h-4 w-4" />Установить приложение
+              </Button>
+            ) : (
+              <InstallSteps platform={platform} />
+            )}
+          </>
+        )}
+        <p className="mt-3 text-zinc-400">Без интернета приложение открывается из памяти телефона, а изменения и платежи складываются в очередь и отправляются при появлении связи.</p>
       </Card>
     </>
   );

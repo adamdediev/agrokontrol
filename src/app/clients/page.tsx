@@ -7,7 +7,7 @@ import { useStore } from "@/lib/store";
 import { useBundles, uniqueSorted } from "@/lib/derived";
 import { addDays, mondayOf, today } from "@/lib/dates";
 import { fmtPhone, num, rub, STATUS_LABEL } from "@/lib/format";
-import { Badge, Button, Card, Empty, Input, PageHeader, Select } from "@/components/ui";
+import { Badge, Button, Card, cx, Empty, Fab, Input, PageHeader, Select } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { ClientForm } from "@/components/forms";
 
@@ -22,6 +22,8 @@ export default function ClientsPage() {
   const [sched, setSched] = useState("");
   const [status, setStatus] = useState("active");
   const [open, setOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilters = [district, settlement, pay, sched, status !== "active" ? "s" : ""].filter(Boolean).length;
 
   const week = mondayOf(today());
   const districts = useMemo(() => uniqueSorted(list.map((b) => b.client.district)), [list]);
@@ -55,14 +57,19 @@ export default function ClientsPage() {
       <PageHeader
         title="Клиенты"
         subtitle={`${filtered.length} из ${list.length}`}
-        actions={isAdmin && <Button variant="primary" onClick={() => setOpen(true)}><Icon name="plus" className="h-4 w-4" />Клиент</Button>}
+        actions={isAdmin && <Button variant="primary" className="max-md:hidden" onClick={() => setOpen(true)}><Icon name="plus" className="h-4 w-4" />Клиент</Button>}
       />
       <div className="mb-4 space-y-2">
-        <div className="relative">
-          <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-          <Input className="pl-9" placeholder="Поиск: имя, телефон, адрес, заметки" value={q} onChange={(e) => setQ(e.target.value)} />
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Icon name="search" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Input type="search" className="pl-9" placeholder="Поиск: имя, телефон, адрес" value={q} onChange={(e) => setQ(e.target.value)} />
+          </div>
+          <Button className="md:hidden" onClick={() => setShowFilters(!showFilters)}>
+            Фильтры{activeFilters > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-emerald-700 px-1 text-[11px] text-white">{activeFilters}</span>}
+          </Button>
         </div>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+        <div className={cx("grid-cols-2 gap-2 md:grid md:grid-cols-5", showFilters ? "grid" : "hidden")}>
           <Select value={district} onChange={(e) => { setDistrict(e.target.value); setSettlement(""); }}>
             <option value="">Все районы</option>
             {districts.map((d) => <option key={d}>{d}</option>)}
@@ -98,7 +105,7 @@ export default function ClientsPage() {
         {/* мобильный список */}
         <div className="md:hidden">
           {filtered.map((b) => (
-            <Link key={b.client.id} href={`/client?id=${b.client.id}`} className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3 last:border-0">
+            <Link key={b.client.id} href={`/client?id=${b.client.id}`} className="flex items-center gap-3 border-b border-zinc-100 px-4 py-3.5 last:border-0 active:bg-zinc-50">
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{b.client.full_name}</div>
                 <div className="truncate text-xs text-zinc-500">{[b.client.settlement, b.client.district].filter(Boolean).join(" · ") || "—"} · {num(b.area)} м²</div>
@@ -151,6 +158,7 @@ export default function ClientsPage() {
         )}
       </Card>
 
+      {isAdmin && <Fab onClick={() => setOpen(true)} label="Новый клиент"><Icon name="plus" className="h-5 w-5" />Клиент</Fab>}
       <ClientForm open={open} onClose={() => setOpen(false)} onSaved={(id) => router.push(`/client?id=${id}`)} />
     </>
   );

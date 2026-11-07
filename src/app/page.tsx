@@ -1,15 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { useBundles } from "@/lib/derived";
 import { addDays, fmtShort, fmtTime, fmtWeek, isoDow, DOW_SHORT, mondayOf, periodStart, today } from "@/lib/dates";
 import { rub } from "@/lib/format";
-import { Badge, Card, Empty, PageHeader, Row, SectionTitle, Stat } from "@/components/ui";
+import { Badge, Card, Empty, Fab, PageHeader, Row, SectionTitle, Stat } from "@/components/ui";
+import { PaymentForm } from "@/components/forms";
+import { Icon } from "@/components/icons";
 
 export default function Dashboard() {
-  const { data, me } = useStore();
+  const { data, me, isAdmin } = useStore();
+  const [payOpen, setPayOpen] = useState(false);
   const { list, byId } = useBundles();
   const t = today();
   const week = mondayOf(t);
@@ -76,27 +79,38 @@ export default function Dashboard() {
 
   return (
     <>
-      <PageHeader title={`Здравствуйте${me?.full_name ? ", " + me.full_name.split(" ")[0] : ""}`} subtitle={`Неделя ${fmtWeek(week)} · период ${fmtShort(pStart)} – ${fmtShort(pEnd)}`} />
+      <PageHeader title={`Здравствуйте${me?.full_name ? ", " + me.full_name.split(" ")[0] : ""}`} subtitle={<>Неделя {fmtWeek(week)}<span className="hidden sm:inline"> · период {fmtShort(pStart)} – {fmtShort(pEnd)}</span></>} />
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
         <Stat label="Всего клиентов" value={m.active.length} sub={`${list.length - m.active.length} в паузе/архиве`} />
         <Stat label="Получено за неделю" value={rub(m.weekSum)} tone="green" />
-        <Stat label="Получено за 4 недели" value={rub(m.periodSum)} tone="green" />
-        <Stat label="Наличные / переводы" value={<span className="text-lg">{rub(m.cash)} / {rub(m.card)}</span>} sub="за текущий период" />
+        <Stat label="За 4 недели" value={rub(m.periodSum)} tone="green" />
+        <Stat
+          label="Наличные / переводы"
+          value={
+            <span className="block text-[15px] leading-snug sm:text-lg">
+              {rub(m.cash)}
+              <span className="text-zinc-300"> / </span>
+              <br className="sm:hidden" />
+              {rub(m.card)}
+            </span>
+          }
+          sub="за текущий период"
+        />
         <Stat label="Задолженность" value={rub(m.debt)} tone={m.debt > 0 ? "red" : undefined} sub="неоплаченные недели" />
-        <Stat label="Долги прошлого сезона" value={rub(m.oldDebt)} tone={m.oldDebt > 0 ? "red" : undefined} />
-        <Stat label="Оплатили / не оплатили" value={`${m.paid.length} / ${m.unpaid.length}`} sub="за текущую неделю" />
+        <Stat label="Долги прошлого сезона" value={rub(m.oldDebt)} tone={m.oldDebt > 0 ? "red" : undefined} sub="отдельно" />
+        <Stat label="Оплатили / нет" value={`${m.paid.length} / ${m.unpaid.length}`} sub="за текущую неделю" />
         <Stat label="Визиты недели" value={`${m.done} / ${m.planned + m.done}`} sub="выполнено / всего" />
       </div>
 
       {m.toPlan > 0 && (
-        <Link href="/calendar" className="mt-4 flex items-center justify-between rounded-2xl bg-emerald-700 px-4 py-3 text-white">
-          <span>Ожидают планирования: {m.toPlan} оплаченных визитов</span>
-          <span>Расставить →</span>
+        <Link href="/calendar" className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-emerald-700 px-4 py-3.5 text-white active:opacity-90">
+          <span className="text-[15px] leading-tight">Ждут планирования: <b>{m.toPlan}</b></span>
+          <span className="shrink-0 text-sm font-medium">Расставить →</span>
         </Link>
       )}
 
-      <div className="grid gap-x-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-2 [&>*]:min-w-0">
         <div>
           <SectionTitle right={<Link href="/calendar" className="text-sm text-emerald-700">Календарь</Link>}>Ближайшие посещения</SectionTitle>
           <Card>
@@ -197,6 +211,12 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+      {isAdmin && (
+        <>
+          <Fab onClick={() => setPayOpen(true)} label="Внести оплату"><Icon name="plus" className="h-5 w-5" />Оплата</Fab>
+          <PaymentForm open={payOpen} onClose={() => setPayOpen(false)} />
+        </>
+      )}
     </>
   );
 }

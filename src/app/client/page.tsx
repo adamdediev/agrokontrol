@@ -7,7 +7,7 @@ import { useStore } from "@/lib/store";
 import { useBundles } from "@/lib/derived";
 import type { Greenhouse, Payment, Visit } from "@/lib/types";
 import { addDays, fmtDate, fmtShort, fmtTime, fmtWeek, mondayOf, today, weekRange } from "@/lib/dates";
-import { fmtPhone, METHOD_LABEL, num, rub, STATUS_LABEL, VISIT_LABEL } from "@/lib/format";
+import { fmtPhone, telHref, METHOD_LABEL, num, rub, STATUS_LABEL, VISIT_LABEL } from "@/lib/format";
 import { weekStateOf } from "@/lib/billing";
 import { Badge, Button, Card, cx, Empty, PageHeader, Row, SectionTitle, Textarea, Toggle } from "@/components/ui";
 import { Icon } from "@/components/icons";
@@ -64,7 +64,7 @@ function ClientView() {
           <span className="flex flex-wrap items-center gap-2">
             <Badge tone={c.status === "active" ? "green" : "gray"}>{STATUS_LABEL[c.status]}</Badge>
             {c.pay_on_visit && <Badge tone="violet">оплата при визите</Badge>}
-            {c.phone && <a href={`tel:${c.phone}`} className="text-emerald-700">{fmtPhone(c.phone)}</a>}
+            {c.phone && <a href={telHref(c.phone)} className="text-emerald-700">{fmtPhone(c.phone)}</a>}
           </span>
         }
         actions={
@@ -77,28 +77,28 @@ function ClientView() {
         }
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="p-4">
-          <div className="text-[13px] text-zinc-500">Плата за 4 недели</div>
-          <div className="mt-1 text-[22px] font-semibold">{rub(fin.periodPrice)}</div>
-          <div className="text-xs text-zinc-400">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+        <Card className="p-3.5 sm:p-4">
+          <div className="text-[12px] text-zinc-500 sm:text-[13px]">Плата за 4 недели</div>
+          <div className="mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px]">{rub(fin.periodPrice)}</div>
+          <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">
             {c.manual_price !== null ? "ручная цена" : `${num(b.area)} м²${Number(c.discount_percent) ? ` · скидка ${c.discount_percent}%` : ""}`}
           </div>
         </Card>
-        <Card className="p-4">
-          <div className="text-[13px] text-zinc-500">За неделю</div>
-          <div className="mt-1 text-[22px] font-semibold">{rub(fin.weekPrice)}</div>
-          <div className="text-xs text-zinc-400">оплачено недель: {fin.paidWeeks.length}</div>
+        <Card className="p-3.5 sm:p-4">
+          <div className="text-[12px] text-zinc-500 sm:text-[13px]">За неделю</div>
+          <div className="mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px]">{rub(fin.weekPrice)}</div>
+          <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">оплачено недель: {fin.paidWeeks.length}</div>
         </Card>
-        <Card className="p-4">
-          <div className="text-[13px] text-zinc-500">Внесено всего</div>
-          <div className="mt-1 text-[22px] font-semibold text-emerald-700">{rub(fin.totalPaid)}</div>
-          <div className="text-xs text-zinc-400">{fin.credit > 0 ? `аванс без недель: ${rub(fin.credit)}` : `платежей: ${b.payments.length}`}</div>
+        <Card className="p-3.5 sm:p-4">
+          <div className="text-[12px] text-zinc-500 sm:text-[13px]">Внесено всего</div>
+          <div className="mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px] text-emerald-700">{rub(fin.totalPaid)}</div>
+          <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">{fin.credit > 0 ? `аванс без недель: ${rub(fin.credit)}` : `платежей: ${b.payments.length}`}</div>
         </Card>
-        <Card className="p-4">
-          <div className="text-[13px] text-zinc-500">Неоплаченная часть</div>
-          <div className={cx("mt-1 text-[22px] font-semibold", fin.debt > 0 && "text-red-600")}>{rub(fin.debt)}</div>
-          <div className={cx("text-xs", fin.oldDebt > 0 ? "text-red-500" : "text-zinc-400")}>
+        <Card className="p-3.5 sm:p-4">
+          <div className="text-[12px] text-zinc-500 sm:text-[13px]">Неоплаченная часть</div>
+          <div className={cx("mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px]", fin.debt > 0 && "text-red-600")}>{rub(fin.debt)}</div>
+          <div className={cx("text-[11px] leading-tight sm:text-xs", fin.oldDebt > 0 ? "text-red-500" : "text-zinc-400")}>
             долг прошлого сезона: {rub(fin.oldDebt)}{c.old_debt_note ? ` (${c.old_debt_note})` : ""}
           </div>
         </Card>
@@ -139,7 +139,7 @@ function ClientView() {
         <div className="mt-2 px-1 text-xs text-zinc-400">Клиент попадает в планирование только после оплаты недели{c.pay_on_visit ? " (включено исключение «оплата при визите»)" : ""}.</div>
       </Card>
 
-      <div className="grid gap-x-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-2 [&>*]:min-w-0">
         <div>
           <SectionTitle>Данные клиента</SectionTitle>
           <Card>
@@ -180,7 +180,7 @@ function ClientView() {
                 </div>
                 <div className="text-right text-sm tabular">
                   <div>{num(Number(g.area))} м² × {num(Number(g.tariff))} ₽</div>
-                  <div className="text-xs text-zinc-400">{rub(Number(g.area) * Number(g.tariff))} / 4 нед.</div>
+                  <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">{rub(Number(g.area) * Number(g.tariff))} / 4 нед.</div>
                 </div>
               </Row>
             ))}
@@ -198,7 +198,7 @@ function ClientView() {
                   <div className="text-xs text-zinc-500">
                     {fmtDate(p.paid_at)} · {METHOD_LABEL[p.method]}{p.received_by ? ` · принял ${p.received_by}` : ""}
                   </div>
-                  <div className="text-xs text-zinc-400">
+                  <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">
                     {p.weeks.length ? `Недели: ${p.weeks.map(fmtShort).join(", ")}` : "Аванс без привязки к неделям"}
                     {p.note ? ` · ${p.note}` : ""}
                   </div>

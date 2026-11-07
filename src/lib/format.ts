@@ -37,3 +37,7 @@ export const VISIT_LABEL = {
   rescheduled: "Перенесён",
 } as const;
 export const ROLE_LABEL = { admin: "Администратор", agronom: "Агроном" } as const;
+
+export function telHref(p: string): string {
+  return "tel:+" + normalizePhone(p);
+}

@@ -5,9 +5,10 @@ import { useStore } from "@/lib/store";
 import { useBundles, uniqueSorted } from "@/lib/derived";
 import type { Client, Greenhouse, Payment, PayMethod, Visit, VisitStatus } from "@/lib/types";
 import { addDays, fmtShort, fmtWeek, mondayOf, today, weekRange } from "@/lib/dates";
-import { METHOD_LABEL, num, rub, VISIT_LABEL } from "@/lib/format";
+import { fmtPhone, METHOD_LABEL, num, rub, telHref, VISIT_LABEL } from "@/lib/format";
 import { nextUnpaidWeek, weekStateOf } from "@/lib/billing";
 import { Button, cx, Field, Input, Modal, Segmented, Select, Textarea, Toggle } from "./ui";
+import { PhoneInput, phoneValue } from "./PhoneInput";
 
 /* ------------------------------ Клиент ------------------------------ */
 
@@ -31,7 +32,7 @@ export function ClientForm({ open, onClose, client, onSaved }: { open: boolean; 
     if (!f.full_name?.trim()) return;
     const row = {
       full_name: f.full_name.trim(),
-      phone: f.phone || "",
+      phone: phoneValue(f.phone || ""),
       district: (f.district || "").trim(),
       settlement: (f.settlement || "").trim(),
       address: f.address || "",
@@ -72,7 +73,7 @@ export function ClientForm({ open, onClose, client, onSaved }: { open: boolean; 
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="ФИО *" className="sm:col-span-2"><Input value={f.full_name || ""} onChange={set("full_name")} autoFocus /></Field>
-        <Field label="Телефон"><Input type="tel" value={f.phone || ""} onChange={set("phone")} placeholder="+7…" /></Field>
+        <Field label="Телефон"><PhoneInput value={f.phone || ""} onChange={(v) => setF({ ...f, phone: v })} /></Field>
         <Field label="Статус">
           <Select value={f.status || "active"} onChange={set("status")}>
             <option value="active">Активный</option>
@@ -383,7 +384,7 @@ export function VisitModal({ open, onClose, visit }: { open: boolean; onClose: (
         {b && (
           <div className="rounded-xl bg-zinc-50 p-3 text-sm">
             <div>{[b.client.district, b.client.settlement, b.client.address].filter(Boolean).join(", ") || "Адрес не указан"}</div>
-            {b.client.phone && <a href={`tel:${b.client.phone}`} className="text-emerald-700">{b.client.phone}</a>}
+            {b.client.phone && <a href={telHref(b.client.phone)} className="text-emerald-700">{fmtPhone(b.client.phone)}</a>}
             {b.client.preferred_time && <div className="text-zinc-500">Удобно: {b.client.preferred_time}</div>}
             <div className="mt-1 text-zinc-500">Неделя обслуживания: {fmtWeek(visit.week_start)} · {b.area} м²</div>
           </div>

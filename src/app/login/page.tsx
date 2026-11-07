@@ -3,14 +3,16 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { supabase, BASE_PATH } from "@/lib/supabase";
-import { normalizePhone } from "@/lib/format";
+import { PhoneInput, isPhoneComplete } from "@/components/PhoneInput";
 import { Button, Field, Input } from "@/components/ui";
 import { Logo } from "@/components/AppShell";
+import { useInstall } from "@/components/Install";
 
 type Mode = "login" | "forgot" | "bootstrap";
 
 export default function LoginPage() {
   const { signIn } = useStore();
+  const { standalone, install } = useInstall();
   const [mode, setMode] = useState<Mode>("login");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
@@ -30,13 +32,17 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setInfo("");
+    if (!isPhoneComplete(phone)) {
+      setError("Введите номер полностью: +7 (XXX) XXX-XX-XX");
+      return;
+    }
     setBusy(true);
     try {
       if (mode === "login") {
         await signIn(phone, password);
       } else if (mode === "bootstrap") {
         const { error } = await supabase.rpc("create_app_user", {
-          p_phone: normalizePhone(phone),
+          p_phone: phone,
           p_password: password,
           p_full_name: name,
           p_role: "admin",
@@ -45,7 +51,7 @@ export default function LoginPage() {
         if (error) throw new Error(error.message);
         await signIn(phone, password);
       } else {
-        const { data: em } = await supabase.rpc("login_email", { p_phone: normalizePhone(phone) });
+        const { data: em } = await supabase.rpc("login_email", { p_phone: phone });
         if (!em) throw new Error("Пользователь с таким телефоном не найден");
         if (String(em).endsWith("@agrokontrol.local")) {
           setInfo("Для этой учётной записи не указан email. Попросите администратора задать новый пароль в разделе «Настройки → Пользователи».");
@@ -65,7 +71,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-dvh place-items-center bg-[#f2f2f7] p-4">
+    <div className="grid min-h-dvh place-items-center bg-[#f2f2f7] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <Logo />
@@ -83,7 +89,7 @@ export default function LoginPage() {
             </Field>
           )}
           <Field label="Телефон">
-            <Input type="tel" inputMode="tel" autoComplete="username" value={phone} onChange={(e) => setPhone(e.target.value)} required placeholder="+7 900 000-00-00" />
+            <PhoneInput value={phone} onChange={setPhone} required autoComplete="username" />
           </Field>
           {mode !== "forgot" && (
             <Field label="Пароль">
@@ -107,6 +113,11 @@ export default function LoginPage() {
           )}
         </form>
         <p className="mt-4 text-center text-xs text-zinc-400">Регистрация закрыта. Доступ выдаёт администратор.</p>
+        {!standalone && (
+          <button type="button" onClick={install} className="mx-auto mt-3 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm ring-1 ring-black/5">
+            Установить приложение на телефон
+          </button>
+        )}
       </div>
     </div>
   );

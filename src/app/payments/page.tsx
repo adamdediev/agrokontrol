@@ -7,7 +7,7 @@ import { useBundles } from "@/lib/derived";
 import type { Payment } from "@/lib/types";
 import { addDays, fmtDate, fmtShort, monthEnd, mondayOf, periodStart, today } from "@/lib/dates";
 import { METHOD_LABEL, rub } from "@/lib/format";
-import { Badge, Button, Card, Empty, Input, PageHeader, Segmented, Select, Stat } from "@/components/ui";
+import { Badge, Button, Card, Empty, Fab, Input, PageHeader, Segmented, Select, Stat } from "@/components/ui";
 import { Icon } from "@/components/icons";
 import { PaymentForm } from "@/components/forms";
 
@@ -49,9 +49,9 @@ export default function PaymentsPage() {
       <PageHeader
         title="Платежи"
         subtitle={range === "all" ? "За всё время" : `${fmtShort(from)} – ${fmtShort(to)}`}
-        actions={isAdmin && <Button variant="primary" onClick={() => { setEdit(undefined); setOpen(true); }}><Icon name="plus" className="h-4 w-4" />Внести оплату</Button>}
+        actions={isAdmin && <Button variant="primary" className="max-md:hidden" onClick={() => { setEdit(undefined); setOpen(true); }}><Icon name="plus" className="h-4 w-4" />Внести оплату</Button>}
       />
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2 [&>*]:max-sm:w-full">
         <Segmented<Range>
           value={range}
           onChange={setRange}
@@ -62,19 +62,43 @@ export default function PaymentsPage() {
             { value: "all", label: "Всё" },
           ]}
         />
-        <Select value={method} onChange={(e) => setMethod(e.target.value)} className="w-auto">
+        <Select value={method} onChange={(e) => setMethod(e.target.value)} className="sm:w-auto">
           <option value="">Все способы</option>
           <option value="cash">Наличные</option>
           <option value="card">Перевод на карту</option>
         </Select>
-        <Input placeholder="Клиент" value={q} onChange={(e) => setQ(e.target.value)} className="w-48" />
+        <Input type="search" placeholder="Поиск по клиенту" value={q} onChange={(e) => setQ(e.target.value)} className="sm:w-48" />
       </div>
-      <div className="mb-4 grid grid-cols-3 gap-3">
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 [&>*:first-child]:col-span-2 sm:[&>*:first-child]:col-span-1">
         <Stat label="Итого" value={rub(sum(list))} tone="green" sub={`${list.length} платежей`} />
         <Stat label="Наличные" value={rub(sum(list.filter((p) => p.method === "cash")))} />
         <Stat label="Переводы" value={rub(sum(list.filter((p) => p.method === "card")))} />
       </div>
-      <Card className="overflow-x-auto">
+      {/* список на телефоне */}
+      <Card className="md:hidden">
+        {list.length === 0 && <Empty>Платежей за период нет</Empty>}
+        {list.map((p) => (
+          <button
+            key={p.id}
+            disabled={!isAdmin}
+            onClick={() => { setEdit(p); setOpen(true); }}
+            className="flex w-full items-center gap-3 border-b border-zinc-100 px-4 py-3 text-left last:border-0 active:bg-zinc-50 disabled:active:bg-transparent"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-medium">{byId.get(p.client_id)?.client.full_name || "—"}</div>
+              <div className="truncate text-xs text-zinc-500">
+                {fmtDate(p.paid_at)} · {p.weeks.length ? `недель: ${p.weeks.length}` : "аванс"}{p.received_by ? ` · ${p.received_by}` : ""}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-semibold tabular">{rub(Number(p.amount))}</div>
+              <Badge tone={p.method === "cash" ? "gray" : "blue"}>{p.method === "cash" ? "наличные" : "перевод"}</Badge>
+            </div>
+          </button>
+        ))}
+      </Card>
+
+      <Card className="hidden overflow-x-auto md:block">
         {list.length === 0 ? (
           <Empty>Платежей за период нет</Empty>
         ) : (
@@ -110,6 +134,7 @@ export default function PaymentsPage() {
           </table>
         )}
       </Card>
+      {isAdmin && <Fab onClick={() => { setEdit(undefined); setOpen(true); }} label="Внести оплату"><Icon name="plus" className="h-5 w-5" />Оплата</Fab>}
       <PaymentForm open={open} onClose={() => setOpen(false)} payment={edit} />
     </>
   );

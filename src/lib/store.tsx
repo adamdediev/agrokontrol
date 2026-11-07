@@ -37,6 +37,7 @@ interface StoreValue {
   queue: Op[];
   conflicts: Conflict[];
   lastSync: string | null;
+  syncError: string | null;
   insert: (table: TableName, row: Record<string, unknown>, label?: string) => string;
   update: (table: TableName, id: string | number, patch: Record<string, unknown>, label?: string) => void;
   remove: (table: TableName, id: string | number, label?: string) => void;
@@ -123,6 +124,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [online, setOnline] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const queueRef = useRef<Op[]>([]);
   const syncingRef = useRef(false);
   const againRef = useRef(false); // синхронизацию запросили, пока шла предыдущая
@@ -175,9 +177,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setLoaded(true);
       const t = new Date().toISOString();
       setLastSync(t);
+      setSyncError(null);
       localStorage.setItem("ak.lastSync", t);
     } catch (e) {
-      if (!isNetworkError(e)) console.error(e);
+      if (!isNetworkError(e)) {
+        console.error(e);
+        const err = e as { code?: string; message?: string };
+        setSyncError(err.code === "PGRST301" || /jwt/i.test(err.message || "") ? "Сессия истекла — войдите заново" : "Ошибка связи с базой");
+      }
     }
   }, []);
 
@@ -428,6 +435,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     queue,
     conflicts,
     lastSync,
+    syncError,
     insert,
     update,
     remove,

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { StoreProvider } from "@/lib/store";
 import { AppShell } from "@/components/AppShell";
+import { InstallProvider } from "@/components/Install";
 
 const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -25,9 +26,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru" className="h-full antialiased">
       <body className="min-h-full bg-[#f2f2f7] text-zinc-900">
-        <StoreProvider>
-          <AppShell>{children}</AppShell>
-        </StoreProvider>
+        <InstallProvider>
+          <StoreProvider>
+            <AppShell>{children}</AppShell>
+          </StoreProvider>
+        </InstallProvider>
       </body>
     </html>
   );
