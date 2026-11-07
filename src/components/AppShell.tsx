@@ -38,9 +38,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { standalone, install } = useInstall();
 
   useEffect(() => {
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-      navigator.serviceWorker.register(`${BASE_PATH}/sw.js`, { scope: `${BASE_PATH}/` }).catch(() => undefined);
-    }
+    if (!("serviceWorker" in navigator) || process.env.NODE_ENV !== "production") return;
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    // вышла новая версия сайта — перезагружаемся один раз, чтобы не работать на старой
+    const onChange = () => {
+      if (!hadController || reloaded) return;
+      reloaded = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", onChange);
+    navigator.serviceWorker
+      .register(`${BASE_PATH}/sw.js`, { scope: `${BASE_PATH}/`, updateViaCache: "none" })
+      .then((reg) => {
+        const check = () => void reg.update().catch(() => undefined);
+        document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && check());
+      })
+      .catch(() => undefined);
+    return () => navigator.serviceWorker.removeEventListener("controllerchange", onChange);
   }, []);
 
   useEffect(() => {
@@ -55,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh bg-[#f2f2f7] md:flex">
+    <div className="min-h-dvh overflow-x-clip bg-[#f2f2f7] md:flex">
       {/* боковое меню на десктопе */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-black/5 bg-white/70 px-3 py-5 backdrop-blur md:flex">
         <div className="mb-6 flex items-center gap-2 px-3">
@@ -91,7 +106,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       <div className="min-w-0 flex-1">
         {/* верхняя панель на мобильном */}
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-black/5 bg-[#f2f2f7]/85 px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-black/5 bg-[#f2f2f7]/85 px-4 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
           <div className="flex items-center gap-2">
             <Logo small />
             <span className="font-semibold">AgroKontrol</span>
@@ -177,11 +192,14 @@ function SyncChip({ compact }: { compact?: boolean }) {
     label = `${queue.length} не отправлено`;
     tone = "amber";
   }
+  const short = compact
+    ? tone === "red" ? "Ошибка" : !online ? (queue.length ? `Офлайн · ${queue.length}` : "Офлайн") : syncing ? "Синхр…" : queue.length ? `${queue.length} в очереди` : "Сохранено"
+    : label;
   return (
-    <button onClick={() => void syncNow()} title="Синхронизировать сейчас" className="text-left">
-      <Badge tone={tone} className={compact ? "" : "px-2.5 py-1"}>
-        <Icon name={online ? "cloud" : "off"} className="mr-1 h-3.5 w-3.5" />
-        {label}
+    <button onClick={() => void syncNow()} title={`${label}. Нажмите, чтобы синхронизировать`} className="min-w-0 shrink text-left">
+      <Badge tone={tone} className={cx("max-w-full", compact ? "" : "px-2.5 py-1")}>
+        <Icon name={online ? "cloud" : "off"} className="mr-1 h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{short}</span>
       </Badge>
     </button>
   );

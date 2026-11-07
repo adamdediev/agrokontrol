@@ -18,7 +18,7 @@ export function PageHeader({ title, subtitle, actions }: { title: string; subtit
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
       <div>
-        <h1 className="text-[26px] font-bold leading-tight tracking-tight text-zinc-900 sm:text-[28px]">{title}</h1>
+        <h1 className="text-[26px] font-bold leading-tight tracking-tight text-zinc-900 [overflow-wrap:anywhere] sm:text-[28px]">{title}</h1>
         {subtitle && <div className="mt-0.5 text-sm text-zinc-500">{subtitle}</div>}
       </div>
       {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
@@ -95,9 +95,9 @@ export function Badge({ children, tone = "gray", className }: { children: React.
 
 export function Stat({ label, value, sub, tone }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tone?: "red" | "green" }) {
   return (
-    <Card className="p-3.5 sm:p-4">
+    <Card className="min-w-0 p-3.5 sm:p-4">
       <div className="text-[12px] leading-tight text-zinc-500 sm:text-[13px]">{label}</div>
-      <div className={cx("mt-1 whitespace-nowrap text-[19px] font-semibold tracking-tight tabular sm:text-[22px]", tone === "red" ? "text-red-600" : tone === "green" ? "text-emerald-700" : "text-zinc-900")}>{value}</div>
+      <div className={cx("mt-1 text-[clamp(15px,5vw,19px)] font-semibold tracking-tight tabular [overflow-wrap:anywhere] sm:text-[22px]", tone === "red" ? "text-red-600" : tone === "green" ? "text-emerald-700" : "text-zinc-900")}>{value}</div>
       {sub && <div className="mt-0.5 text-[11px] leading-tight text-zinc-400 sm:text-xs">{sub}</div>}
     </Card>
   );

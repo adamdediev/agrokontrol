@@ -49,7 +49,7 @@ function Schedule() {
   const [saved, setSaved] = useState(false);
   useEffect(() => setF(data.settings), [data.settings]);
   const dirty = JSON.stringify(f) !== JSON.stringify(data.settings);
-  const num = (k: keyof Settings) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: Number(e.target.value) });
+  const num = (k: keyof Settings) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [k]: Number(e.target.value) }));
 
   function save() {
     const { work_days, day_start, day_end, visit_limit, visit_duration, interval_min, travel_min, period_anchor } = f;
@@ -72,7 +72,7 @@ function Schedule() {
                   <button
                     key={d}
                     type="button"
-                    onClick={() => setF({ ...f, work_days: on ? f.work_days.filter((x) => x !== n) : [...f.work_days, n] })}
+                    onClick={() => setF((p) => ({ ...p, work_days: on ? f.work_days.filter((x) => x !== n) : [...f.work_days, n] }))}
                     className={cx("h-10 w-12 rounded-xl text-sm font-medium ring-1", on ? "bg-emerald-700 text-white ring-emerald-700" : "ring-zinc-200")}
                   >
                     {d}
@@ -82,14 +82,14 @@ function Schedule() {
             </div>
           </Field>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Field label="Начало дня"><Input type="time" value={fmtTime(f.day_start)} onChange={(e) => setF({ ...f, day_start: e.target.value + ":00" })} /></Field>
-            <Field label="Конец дня"><Input type="time" value={fmtTime(f.day_end)} onChange={(e) => setF({ ...f, day_end: e.target.value + ":00" })} /></Field>
+            <Field label="Начало дня"><Input type="time" value={fmtTime(f.day_start)} onChange={(e) => setF((p) => ({ ...p, day_start: e.target.value + ":00" }))} /></Field>
+            <Field label="Конец дня"><Input type="time" value={fmtTime(f.day_end)} onChange={(e) => setF((p) => ({ ...p, day_end: e.target.value + ":00" }))} /></Field>
             <Field label="Лимит визитов в день"><Input type="number" min={1} value={f.visit_limit} onChange={num("visit_limit")} /></Field>
             <Field label="Длительность осмотра, мин"><Input type="number" min={5} step={5} value={f.visit_duration} onChange={num("visit_duration")} /></Field>
             <Field label="Интервал в одном посёлке, мин"><Input type="number" min={0} step={5} value={f.interval_min} onChange={num("interval_min")} /></Field>
             <Field label="Дорога между посёлками, мин"><Input type="number" min={0} step={5} value={f.travel_min} onChange={num("travel_min")} /></Field>
             <Field label="Начало 4-недельных периодов" hint="Понедельник, от которого считаются периоды" className="col-span-2">
-              <Input type="date" value={f.period_anchor} onChange={(e) => setF({ ...f, period_anchor: e.target.value })} />
+              <Input type="date" value={f.period_anchor} onChange={(e) => setF((p) => ({ ...p, period_anchor: e.target.value }))} />
             </Field>
           </div>
         </fieldset>
@@ -168,16 +168,16 @@ function Users() {
 
       <Modal open={add} onClose={() => setAdd(false)} title="Новый пользователь" footer={<><Button onClick={() => setAdd(false)}>Отмена</Button><Button variant="primary" onClick={create} disabled={busy}>Создать</Button></>}>
         <div className="space-y-3">
-          <Field label="Имя"><Input value={f.full_name} onChange={(e) => setF({ ...f, full_name: e.target.value })} /></Field>
-          <Field label="Телефон (логин)"><PhoneInput value={f.phone} onChange={(v) => setF({ ...f, phone: v })} /></Field>
-          <Field label="Пароль"><Input type="text" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} minLength={6} /></Field>
+          <Field label="Имя"><Input autoComplete="off" name="new-user-name" value={f.full_name} onChange={(e) => setF((p) => ({ ...p, full_name: e.target.value }))} /></Field>
+          <Field label="Телефон (логин)"><PhoneInput autoComplete="off" value={f.phone} onChange={(v) => setF((p) => ({ ...p, phone: v }))} /></Field>
+          <Field label="Пароль"><Input type="text" autoComplete="new-password" value={f.password} onChange={(e) => setF((p) => ({ ...p, password: e.target.value }))} minLength={6} /></Field>
           <Field label="Роль">
-            <Select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
+            <Select value={f.role} onChange={(e) => setF((p) => ({ ...p, role: e.target.value }))}>
               <option value="agronom">Агроном</option>
               <option value="admin">Администратор</option>
             </Select>
           </Field>
-          <Field label="Email для восстановления (необязательно)"><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+          <Field label="Email для восстановления (необязательно)"><Input type="email" autoComplete="off" name="new-user-email" value={f.email} onChange={(e) => setF((p) => ({ ...p, email: e.target.value }))} /></Field>
           {err && <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{err}</div>}
         </div>
       </Modal>

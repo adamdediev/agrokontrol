@@ -22,6 +22,13 @@ export default function ClientPage() {
 }
 
 const VISIT_TONE = { planned: "blue", done: "green", missed: "red", rescheduled: "amber" } as const;
+const VISIT_SHORT = { planned: "план", done: "был", missed: "не был", rescheduled: "перенос" } as const;
+const VISIT_CHIP = {
+  planned: "bg-sky-50 text-sky-700",
+  done: "bg-emerald-100 text-emerald-800",
+  missed: "bg-red-50 text-red-600",
+  rescheduled: "bg-amber-50 text-amber-700",
+} as const;
 
 function ClientView() {
   const id = useSearchParams().get("id") || "";
@@ -77,27 +84,27 @@ function ClientView() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4 [&>*]:min-w-0">
         <Card className="p-3.5 sm:p-4">
           <div className="text-[12px] text-zinc-500 sm:text-[13px]">Плата за 4 недели</div>
-          <div className="mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px]">{rub(fin.periodPrice)}</div>
+          <div className="mt-1 text-[clamp(15px,5vw,19px)] [overflow-wrap:anywhere] font-semibold tabular sm:text-[22px]">{rub(fin.periodPrice)}</div>
           <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">
             {c.manual_price !== null ? "ручная цена" : `${num(b.area)} м²${Number(c.discount_percent) ? ` · скидка ${c.discount_percent}%` : ""}`}
           </div>
         </Card>
         <Card className="p-3.5 sm:p-4">
           <div className="text-[12px] text-zinc-500 sm:text-[13px]">За неделю</div>
-          <div className="mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px]">{rub(fin.weekPrice)}</div>
+          <div className="mt-1 text-[clamp(15px,5vw,19px)] [overflow-wrap:anywhere] font-semibold tabular sm:text-[22px]">{rub(fin.weekPrice)}</div>
           <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">оплачено недель: {fin.paidWeeks.length}</div>
         </Card>
         <Card className="p-3.5 sm:p-4">
           <div className="text-[12px] text-zinc-500 sm:text-[13px]">Внесено всего</div>
-          <div className="mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px] text-emerald-700">{rub(fin.totalPaid)}</div>
+          <div className="mt-1 text-[clamp(15px,5vw,19px)] [overflow-wrap:anywhere] font-semibold tabular sm:text-[22px] text-emerald-700">{rub(fin.totalPaid)}</div>
           <div className="text-[11px] leading-tight text-zinc-400 sm:text-xs">{fin.credit > 0 ? `аванс без недель: ${rub(fin.credit)}` : `платежей: ${b.payments.length}`}</div>
         </Card>
         <Card className="p-3.5 sm:p-4">
           <div className="text-[12px] text-zinc-500 sm:text-[13px]">Неоплаченная часть</div>
-          <div className={cx("mt-1 whitespace-nowrap text-[19px] font-semibold tabular sm:text-[22px]", fin.debt > 0 && "text-red-600")}>{rub(fin.debt)}</div>
+          <div className={cx("mt-1 text-[clamp(15px,5vw,19px)] [overflow-wrap:anywhere] font-semibold tabular sm:text-[22px]", fin.debt > 0 && "text-red-600")}>{rub(fin.debt)}</div>
           <div className={cx("text-[11px] leading-tight sm:text-xs", fin.oldDebt > 0 ? "text-red-500" : "text-zinc-400")}>
             долг прошлого сезона: {rub(fin.oldDebt)}{c.old_debt_note ? ` (${c.old_debt_note})` : ""}
           </div>
@@ -106,7 +113,7 @@ function ClientView() {
 
       <SectionTitle>Недели обслуживания</SectionTitle>
       <Card className="p-3">
-        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:grid-cols-12">
+        <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6 lg:grid-cols-12 [&>*]:min-w-0">
           {grid.map((w) => {
             const info = fin.weeks.find((x) => x.week === w);
             const st = info ? weekStateOf(info.allocated, info.due) : "unpaid";
@@ -116,18 +123,21 @@ function ClientView() {
               <div
                 key={w}
                 className={cx(
-                  "rounded-xl p-2 text-xs ring-1",
+                  "min-w-0 break-words rounded-xl p-2 text-xs ring-1",
                   st === "paid" ? "bg-emerald-50 ring-emerald-200" : st === "partial" ? "bg-amber-50 ring-amber-200" : "bg-white ring-zinc-200",
                   w === cw && "ring-2 ring-emerald-600",
                 )}
               >
                 <div className="font-medium">{fmtShort(w)}</div>
                 <div className={st === "paid" ? "text-emerald-700" : st === "partial" ? "text-amber-700" : "text-zinc-400"}>
-                  {st === "paid" ? "оплачена" : st === "partial" ? `${rub(info!.allocated)}` : "не оплачена"}
+                  {st === "paid" ? "оплачена" : st === "partial" ? `${rub(info!.allocated)}` : "нет оплаты"}
                 </div>
                 {v ? (
-                  <button onClick={() => setVisit(v)} className="mt-1 text-left">
-                    <Badge tone={VISIT_TONE[v.status]}>{VISIT_LABEL[v.status]}</Badge>
+                  <button
+                    onClick={() => setVisit(v)}
+                    className={cx("mt-1 block max-w-full truncate rounded-full px-1.5 py-0.5 text-left text-[11px] font-medium", VISIT_CHIP[v.status])}
+                  >
+                    {v.visit_date ? VISIT_SHORT[v.status] : "без даты"}
                   </button>
                 ) : canPlan ? (
                   <button onClick={() => planWeek(w)} className="mt-1 text-emerald-700 underline">в план</button>

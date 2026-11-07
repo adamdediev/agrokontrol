@@ -26,7 +26,7 @@ export function ClientForm({ open, onClose, client, onSaved }: { open: boolean; 
 
   const districts = useMemo(() => uniqueSorted(data.clients.map((c) => c.district)), [data.clients]);
   const settlements = useMemo(() => uniqueSorted(data.clients.map((c) => c.settlement)), [data.clients]);
-  const set = (k: keyof Client) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...f, [k]: e.target.value });
+  const set = (k: keyof Client) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF((p) => ({ ...p, [k]: e.target.value }));
 
   function save() {
     if (!f.full_name?.trim()) return;
@@ -73,7 +73,7 @@ export function ClientForm({ open, onClose, client, onSaved }: { open: boolean; 
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <Field label="ФИО *" className="sm:col-span-2"><Input value={f.full_name || ""} onChange={set("full_name")} autoFocus /></Field>
-        <Field label="Телефон"><PhoneInput value={f.phone || ""} onChange={(v) => setF({ ...f, phone: v })} /></Field>
+        <Field label="Телефон"><PhoneInput value={f.phone || ""} onChange={(v) => setF((p) => ({ ...p, phone: v }))} /></Field>
         <Field label="Статус">
           <Select value={f.status || "active"} onChange={set("status")}>
             <option value="active">Активный</option>
@@ -91,7 +91,7 @@ export function ClientForm({ open, onClose, client, onSaved }: { open: boolean; 
         <Field label="Комментарий к старому долгу" className="sm:col-span-2"><Input value={f.old_debt_note || ""} onChange={set("old_debt_note")} /></Field>
         <Field label="Примечания" className="sm:col-span-2"><Textarea value={f.notes || ""} onChange={set("notes")} /></Field>
         <div className="sm:col-span-2 rounded-xl bg-zinc-50 p-3">
-          <Toggle checked={Boolean(f.pay_on_visit)} onChange={(v) => setF({ ...f, pay_on_visit: v })} label="Исключение «оплата при визите» — планировать без предоплаты" />
+          <Toggle checked={Boolean(f.pay_on_visit)} onChange={(v) => setF((p) => ({ ...p, pay_on_visit: v }))} label="Исключение «оплата при визите» — планировать без предоплаты" />
         </div>
         {!client && (
           <div className="sm:col-span-2 grid gap-3 rounded-xl bg-emerald-50/50 p-3 sm:grid-cols-3">
@@ -141,14 +141,14 @@ export function GreenhouseForm({ open, onClose, clientId, gh }: { open: boolean;
       }
     >
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Название" className="sm:col-span-2"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder="Теплица 1" /></Field>
-        <Field label="Площадь, м²"><Input type="number" min={0} value={f.area} onChange={(e) => setF({ ...f, area: e.target.value })} /></Field>
-        <Field label="Тариф, ₽/м² за 4 недели"><Input type="number" min={0} step="0.01" value={f.tariff} onChange={(e) => setF({ ...f, tariff: e.target.value })} /></Field>
-        <Field label="Адрес" className="sm:col-span-2"><Input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} /></Field>
+        <Field label="Название" className="sm:col-span-2"><Input value={f.name} onChange={(e) => setF((p) => ({ ...p, name: e.target.value }))} placeholder="Теплица 1" /></Field>
+        <Field label="Площадь, м²"><Input type="number" min={0} value={f.area} onChange={(e) => setF((p) => ({ ...p, area: e.target.value }))} /></Field>
+        <Field label="Тариф, ₽/м² за 4 недели"><Input type="number" min={0} step="0.01" value={f.tariff} onChange={(e) => setF((p) => ({ ...p, tariff: e.target.value }))} /></Field>
+        <Field label="Адрес" className="sm:col-span-2"><Input value={f.address} onChange={(e) => setF((p) => ({ ...p, address: e.target.value }))} /></Field>
         <div className="sm:col-span-2 rounded-xl bg-zinc-50 p-3 text-sm">
           {num(Number(f.area || 0))} м² × {num(Number(f.tariff || 0))} ₽ = <b>{rub(total)}</b> за 4 недели · {rub(total / 4)} в неделю
         </div>
-        <div className="sm:col-span-2"><Toggle checked={f.archived} onChange={(v) => setF({ ...f, archived: v })} label="В архиве (не учитывается в расчёте)" /></div>
+        <div className="sm:col-span-2"><Toggle checked={f.archived} onChange={(v) => setF((p) => ({ ...p, archived: v }))} label="В архиве (не учитывается в расчёте)" /></div>
       </div>
     </Modal>
   );
@@ -392,18 +392,18 @@ export function VisitModal({ open, onClose, visit }: { open: boolean; onClose: (
         <Field label="Статус">
           <div className="grid grid-cols-2 gap-1.5">
             {(Object.keys(VISIT_LABEL) as VisitStatus[]).map((s) => (
-              <button key={s} onClick={() => setF({ ...f, status: s })} className={cx("rounded-xl px-3 py-2 text-sm ring-1", f.status === s ? "bg-emerald-700 text-white ring-emerald-700" : "ring-zinc-200")}>
+              <button key={s} onClick={() => setF((p) => ({ ...p, status: s }))} className={cx("rounded-xl px-3 py-2 text-sm ring-1", f.status === s ? "bg-emerald-700 text-white ring-emerald-700" : "ring-zinc-200")}>
                 {VISIT_LABEL[s]}
               </button>
             ))}
           </div>
         </Field>
         <div className="grid grid-cols-3 gap-3">
-          <Field label="Дата"><Input type="date" value={f.visit_date} min={visit.week_start} onChange={(e) => setF({ ...f, visit_date: e.target.value })} /></Field>
-          <Field label="Время"><Input type="time" value={f.start_time} onChange={(e) => setF({ ...f, start_time: e.target.value })} /></Field>
-          <Field label="Минут"><Input type="number" min={5} step={5} value={f.duration_min} onChange={(e) => setF({ ...f, duration_min: Number(e.target.value) })} /></Field>
+          <Field label="Дата"><Input type="date" value={f.visit_date} min={visit.week_start} onChange={(e) => setF((p) => ({ ...p, visit_date: e.target.value }))} /></Field>
+          <Field label="Время"><Input type="time" value={f.start_time} onChange={(e) => setF((p) => ({ ...p, start_time: e.target.value }))} /></Field>
+          <Field label="Минут"><Input type="number" min={5} step={5} value={f.duration_min} onChange={(e) => setF((p) => ({ ...p, duration_min: Number(e.target.value) }))} /></Field>
         </div>
-        <Field label="Заметка по визиту"><Textarea rows={3} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} placeholder="Что сделано, что заметили…" /></Field>
+        <Field label="Заметка по визиту"><Textarea rows={3} value={f.note} onChange={(e) => setF((p) => ({ ...p, note: e.target.value }))} placeholder="Что сделано, что заметили…" /></Field>
         {visit.visit_date && f.visit_date && f.visit_date !== visit.visit_date && <div className="text-xs text-zinc-500">Перенос с {fmtShort(visit.visit_date)} — статус станет «Перенесён».</div>}
       </div>
     </Modal>
