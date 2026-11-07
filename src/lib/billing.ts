@@ -147,8 +147,11 @@ export interface AutoPlanResult {
  * Автоматическая расстановка визитов одной недели по рабочим дням.
  * Клиенты группируются по району и посёлку, между посёлками учитывается время дороги.
  */
-export function autoPlan(entries: PlanEntry[], week: string, settings: Settings, existing: Visit[]): AutoPlanResult {
-  const days = [1, 2, 3, 4, 5, 6, 7].filter((d) => settings.work_days.includes(d)).map((d) => addDays(week, d - 1));
+export function autoPlan(entries: PlanEntry[], week: string, settings: Settings, existing: Visit[], fromDate = ""): AutoPlanResult {
+  const days = [1, 2, 3, 4, 5, 6, 7]
+    .filter((d) => settings.work_days.includes(d))
+    .map((d) => addDays(week, d - 1))
+    .filter((d) => d >= fromDate); // прошедшие дни не заполняем
   const dayStart = timeToMin(settings.day_start);
   const dayEnd = timeToMin(settings.day_end);
   const dur = settings.visit_duration;

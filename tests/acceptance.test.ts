@@ -54,4 +54,8 @@ assert.equal(res.placed.length, 8);
 assert.equal(res.notPlaced.length, 2);
 assert.deepEqual([...new Set(res.placed.map((p) => p.visit_date))], [addDays(w0, 2), addDays(w0, 3)]);
 
+// Прошедшие дни автоплан не заполняет
+const later = autoPlan(entries.slice(0, 2), w0, DEFAULT_SETTINGS, [], addDays(w0, 3));
+assert.ok(later.placed.every((p) => p.visit_date >= addDays(w0, 3)));
+
 console.log("✓ все проверки приёмки пройдены");

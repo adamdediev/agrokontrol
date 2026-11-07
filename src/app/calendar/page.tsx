@@ -76,11 +76,11 @@ export default function CalendarPage() {
 
   function runAutoPlan(week: string) {
     const entries = planEntries.filter((e) => e.week === week);
-    const res = autoPlan(entries, week, s, data.visits);
+    const res = autoPlan(entries, week, s, data.visits, today());
     for (const p of res.placed) insert("visits", { ...p, status: "planned", note: "" }, `Автоплан ${byId.get(p.client_id)?.client.full_name || ""}`);
     setMsg(
       `Неделя ${fmtWeek(week)}: расставлено ${res.placed.length}` +
-        (res.notPlaced.length ? `, не поместилось ${res.notPlaced.length} — увеличьте лимит или рабочие дни` : ""),
+        (res.notPlaced.length ? `, не поместилось ${res.notPlaced.length} — рабочие дни прошли или заполнены; расставьте вручную` : ""),
     );
     setTimeout(() => setMsg(""), 6000);
   }

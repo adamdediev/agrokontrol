@@ -383,17 +383,17 @@ begin
   perform public.make_backup('before-restore');
   perform set_config('app.restoring', '1', true);
 
-  delete from public.visits;
-  delete from public.payments;
-  delete from public.greenhouses;
-  delete from public.clients;
+  delete from public.visits where true;
+  delete from public.payments where true;
+  delete from public.greenhouses where true;
+  delete from public.clients where true;
 
   insert into public.clients select * from jsonb_populate_recordset(null::public.clients, p_data -> 'clients');
   insert into public.greenhouses select * from jsonb_populate_recordset(null::public.greenhouses, p_data -> 'greenhouses');
   insert into public.payments select * from jsonb_populate_recordset(null::public.payments, p_data -> 'payments');
   insert into public.visits select * from jsonb_populate_recordset(null::public.visits, p_data -> 'visits');
   if p_data -> 'settings' is not null and jsonb_typeof(p_data -> 'settings') = 'object' then
-    delete from public.settings;
+    delete from public.settings where true;
     insert into public.settings select * from jsonb_populate_record(null::public.settings, p_data -> 'settings');
   end if;
 

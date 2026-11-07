@@ -125,6 +125,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const queueRef = useRef<Op[]>([]);
   const syncingRef = useRef(false);
+  const againRef = useRef(false); // синхронизацию запросили, пока шла предыдущая
 
   // начальная загрузка из кэша
   useEffect(() => {
@@ -181,7 +182,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const syncNow = useCallback(async () => {
-    if (!isConfigured || syncingRef.current) return;
+    if (!isConfigured) return;
+    if (syncingRef.current) {
+      againRef.current = true;
+      return;
+    }
     if (typeof navigator !== "undefined" && !navigator.onLine) return;
     syncingRef.current = true;
     setSyncing(true);
@@ -240,8 +245,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       await refresh();
       syncingRef.current = false;
       setSyncing(false);
+      if (againRef.current) {
+        againRef.current = false;
+        setTimeout(() => void syncRef.current(), 0);
+      }
     }
   }, [refresh, setQ]);
+  const syncRef = useRef(syncNow);
+  useEffect(() => {
+    syncRef.current = syncNow;
+  }, [syncNow]);
 
   const enqueue = useCallback(
     (op: Op) => {
